@@ -35,7 +35,8 @@ class HypermediaClient(object):
         request = request_factory('GET', root_url)
         p = request.prepare()
         return HypermediaClient.send_and_construct(p, session=session, verify=verify,
-                                                   request_factory=request_factory, builder=builder)
+                                                   request_factory=request_factory, session_factory=session_factory,
+                                                   builder=builder)
 
     @staticmethod
     def send_and_construct(prepared_request, session=None, verify=False, request_factory=requests.Request,

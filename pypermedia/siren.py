@@ -472,7 +472,7 @@ class SirenAction(RequestMixin):
         :return: response from the server
         :rtype: Response
         """
-        s = _session or session_factory()
+        s = _session or self.session_factory()
         return s.send(self.as_request(**kwfields), verify=self.verify)
 
     @staticmethod
@@ -502,7 +502,7 @@ class SirenLink(SirenBuilder):
     (parent-child) ownership.
     """
 
-    def __init__(self, rel, href, verify=False, request_factory=Request):
+    def __init__(self, rel, href, verify=False, request_factory=Request, session_factory=Session):
         """
         Constructor.
 
@@ -527,6 +527,7 @@ class SirenLink(SirenBuilder):
 
         self.verify = verify
         self.request_factory = request_factory
+        self.session_factory = session_factory
 
     def add_rel(self, new_rel):
         """
@@ -600,7 +601,7 @@ class SirenLink(SirenBuilder):
         :return: Request object representation of this action
         :rtype: Request
         """
-        s = _session or session_factory()
+        s = _session or self.session_factory()
         return s.send(self.as_request(**kwfields), verify=self.verify)
 
 
