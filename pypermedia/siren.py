@@ -41,12 +41,14 @@ def _check_and_decode_response(response):
 class RequestMixin(object):
     """Values for any request creating object."""
 
-    def __init__(self, request_factory=Request, verify=False):
+    def __init__(self, request_factory=Request, session_factory=Session, verify=False):
         """
         :param type|function request_factory: constructor for request objects
+        :param type|function session_factory: constructor for session objects
         :param bool verify: whether ssl certificate validation should occur
         """
         self.request_factory = request_factory
+        self.session_factory = session_factory
         self.verify = verify
 
 
@@ -107,7 +109,7 @@ class SirenBuilder(RequestMixin):
 
         actions = []  # odd that multiple actions can have the same name, is this for overloading? it will break python!
         for action_dict in entity_dict.get('actions', []):
-            siren_action = SirenAction(request_factory=self.request_factory, verify=self.verify, **action_dict)
+            siren_action = SirenAction(request_factory=self.request_factory, session_factory=self.session_factory, verify=self.verify, **action_dict)
             actions.append(siren_action)
 
         links = []  # odd that multiple links can have the same relationship & that because this is a list we could  have overloading?? this will break python!
@@ -125,7 +127,7 @@ class SirenBuilder(RequestMixin):
 
         siren_entity = SirenEntity(classnames=classname, properties=properties, actions=actions,
                                    links=links, entities=entities, rel=rel, verify=self.verify,
-                                   request_factory=self.request_factory)
+                                   request_factory=self.request_factory, session_factory=self.session_factory)
         return siren_entity
 
     def _construct_link(self, links_dict):
@@ -139,7 +141,7 @@ class SirenBuilder(RequestMixin):
         """
         rel = links_dict['rel']
         href = links_dict['href']
-        link = SirenLink(rel=rel, href=href, verify=self.verify, request_factory=self.request_factory)
+        link = SirenLink(rel=rel, href=href, verify=self.verify, request_factory=self.request_factory, session_factory=self.session_factory)
         return link
 
 
@@ -263,7 +265,7 @@ class SirenEntity(RequestMixin):
         ModelClass = type(str(self.get_primary_classname()), (), self.properties)
 
         # NOTE: there is no checking to ensure that over-writing of methods will not occur
-        siren_builder = SirenBuilder(verify=self.verify, request_factory=self.request_factory)
+        siren_builder = SirenBuilder(verify=self.verify, request_factory=self.request_factory, session_factory=self.session_factory)
         # add actions as methods
         for action in self.actions:
             method_name = SirenEntity._create_python_method_name(action.name)
@@ -274,7 +276,7 @@ class SirenEntity(RequestMixin):
         for link in self.links:
             for rel in link.rel:
                 method_name = SirenEntity._create_python_method_name(rel)
-                siren_builder = SirenBuilder(verify=self.verify, request_factory=self.request_factory)
+                siren_builder = SirenBuilder(verify=self.verify, request_factory=self.request_factory, session_factory=self.session_factory)
                 method_def = _create_action_fn(link, siren_builder)
 
                 setattr(ModelClass, method_name, method_def)
@@ -315,7 +317,7 @@ class SirenEntity(RequestMixin):
 class SirenAction(RequestMixin):
     """Representation of a Siren Action element. Actions are operations on a hypermedia instance or class level."""
 
-    def __init__(self, name, href, type='application/json', fields=None, title=None, method='GET', verify=False, request_factory=Request, **kwargs):
+    def __init__(self, name, href, type='application/json', fields=None, title=None, method='GET', verify=False, request_factory=Request, session_factory=Session, **kwargs):
         """
         Constructor.
 
@@ -332,6 +334,7 @@ class SirenAction(RequestMixin):
         :param method: HTTP verb to use for this action (GET, PUT, POST, PATCH, HEAD, etc.)
         :type method: str|unicode
         :param request_factory: constructor for request objects
+        :param session_factory: constructor for session objects
         :type type or function
         :param dict kwargs:  Extra stuff to ignore for now.
         """
@@ -341,7 +344,7 @@ class SirenAction(RequestMixin):
         self.href = href
         self.type = type
         self.fields = fields if fields else []
-        super(SirenAction, self).__init__(request_factory=request_factory, verify=verify, **kwargs)
+        super(SirenAction, self).__init__(request_factory=request_factory, session_factory=session_factory, verify=verify, **kwargs)
 
     @staticmethod
     def create_field(name, type=None, value=None):
@@ -469,7 +472,7 @@ class SirenAction(RequestMixin):
         :return: response from the server
         :rtype: Response
         """
-        s = _session or Session()
+        s = _session or session_factory()
         return s.send(self.as_request(**kwfields), verify=self.verify)
 
     @staticmethod
@@ -597,7 +600,7 @@ class SirenLink(SirenBuilder):
         :return: Request object representation of this action
         :rtype: Request
         """
-        s = _session or Session()
+        s = _session or session_factory()
         return s.send(self.as_request(**kwfields), verify=self.verify)
 
 

@@ -16,7 +16,7 @@ class HypermediaClient(object):
     """
 
     @staticmethod
-    def connect(root_url, session=None, verify=False, request_factory=requests.Request, builder=SirenBuilder):
+    def connect(root_url, session=None, verify=False, request_factory=requests.Request, session_factory=requests.Session, builder=SirenBuilder):
         """
         Creates a client by connecting to the root api url. Pointing to other urls is possible so long as their
         responses correspond to standard siren-json.
@@ -25,6 +25,7 @@ class HypermediaClient(object):
         :param bool verify: whether to verify ssl certificates from the server or ignore them (should be false for
             local dev)
         :param type|function request_factory: constructor of request objects
+        :param type|function session_factory: constructor of session objects
         :return: codex client generated from root url
         :rtype: object
         """
@@ -38,7 +39,7 @@ class HypermediaClient(object):
 
     @staticmethod
     def send_and_construct(prepared_request, session=None, verify=False, request_factory=requests.Request,
-                           builder=SirenBuilder):
+                           session_factory=requests.Session, builder=SirenBuilder):
         """
         Takes a PreparedRequest object and sends it and then constructs the SirenObject from the response.
 
@@ -52,7 +53,7 @@ class HypermediaClient(object):
         :rtype: object
         :raises: ConnectError
         """
-        session = session or requests.Session()
+        session = session or session_factory()
         try:
             response = session.send(prepared_request, verify=verify)
         except requests.exceptions.ConnectionError as e:
@@ -61,7 +62,7 @@ class HypermediaClient(object):
             raise ConnectError('Unable to connect to server! Unable to construct client. root_url="{0}" verify="{1}"'.
                                format(prepared_request.url, verify), e)
 
-        builder = builder(verify=verify, request_factory=request_factory)
+        builder = builder(verify=verify, request_factory=request_factory, session_factory=session_factory)
         obj = builder.from_api_response(response)
         return obj.as_python_object()
 
